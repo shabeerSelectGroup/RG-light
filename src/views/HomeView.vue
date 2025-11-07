@@ -9,9 +9,18 @@ const lightChanges = ref(0);
 const streak = ref(0);
 const particles = ref([]);
 const showCelebration = ref(false);
+const audio = ref(null);
+
+// Initialize audio when component mounts
+import bgmUrl from '@/assets/music/bgm.mp3';
+
+onMounted(() => {
+  audio.value = new Audio(bgmUrl);
+  audio.value.loop = true;
+});
 
 // Array of possible durations in milliseconds
-const durationOptions = [5000, 4000, 3500, 2000, 1000]; // 5s, 4s, 3.5s, 2s, 1s
+const durationOptions = [15000, 5000, 10000]; // 15s, 5s, 10s
 const getRandomTime = () => {
   const randomIndex = Math.floor(Math.random() * durationOptions.length);
   return durationOptions[randomIndex];
@@ -32,7 +41,18 @@ const createParticles = () => {
 
 const changeLight = () => {
   // Toggle between red and green
-  lightColor.value = lightColor.value === 'bg-red-500' ? 'bg-green-500' : 'bg-red-500';
+  const wasRed = lightColor.value === 'bg-red-500';
+  lightColor.value = wasRed ? 'bg-green-500' : 'bg-red-500';
+  
+  // Play or pause audio based on light color
+  if (audio.value) {
+    if (wasRed) {
+      audio.value.currentTime = 0; // Restart from beginning
+      audio.value.play().catch(e => console.log('Audio play failed:', e));
+    } else {
+      audio.value.pause();
+    }
+  }
   
   lightChanges.value++;
   streak.value++;
@@ -65,12 +85,22 @@ const toggleGame = () => {
     // Stop the game
     clearTimeout(gameInterval.value);
     lightColor.value = 'bg-gray-500';
+    // Stop audio when game is stopped
+    if (audio.value) {
+      audio.value.pause();
+      audio.value.currentTime = 0;
+    }
   }
 };
 
 // Clean up on component unmount
 onUnmounted(() => {
   clearTimeout(gameInterval.value);
+  // Clean up audio
+  if (audio.value) {
+    audio.value.pause();
+    audio.value = null;
+  }
 });
 </script>
 
