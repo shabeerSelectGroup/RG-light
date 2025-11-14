@@ -7,8 +7,12 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: () => import('../views/HomeView.vue'),
+    },
+    {
+      path: '/qr-generator',
+      name: 'qr-generator',
+      component: () => import('../views/QRCodeGenerator.vue'),
     }
-    
   ],
 })
 

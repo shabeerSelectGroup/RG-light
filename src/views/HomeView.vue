@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { PlayIcon, PauseIcon, BoltIcon, TrophyIcon, FireIcon, SparklesIcon } from '@heroicons/vue/24/solid';
+import { PlayIcon, PauseIcon, BoltIcon, TrophyIcon, FireIcon, SparklesIcon, SpeakerWaveIcon, SpeakerXMarkIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon, XMarkIcon } from '@heroicons/vue/24/solid';
 
 const lightColor = ref('bg-gray-500');
 const gameInterval = ref(null);
@@ -10,6 +10,49 @@ const streak = ref(0);
 const particles = ref([]);
 const showCelebration = ref(false);
 const audio = ref(null);
+const isMuted = ref(false);
+const isFullscreen = ref(false);
+const lightContainer = ref(null);
+
+// Toggle fullscreen mode
+const toggleFullscreen = async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await lightContainer.value.requestFullscreen();
+      isFullscreen.value = true;
+    } else {
+      await document.exitFullscreen();
+      isFullscreen.value = false;
+    }
+  } catch (err) {
+    console.error('Error toggling fullscreen:', err);
+  }
+};
+
+// Handle fullscreen change
+const handleFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement;
+};
+
+// Clean up event listeners
+onMounted(() => {
+  document.addEventListener('fullscreenchange', handleFullscreenChange);  
+});
+
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+});
+
+// Toggle mute state
+const toggleMute = () => {
+  if (audio.value) {
+    audio.value.muted = !audio.value.muted;
+    isMuted.value = audio.value.muted;
+  }
+};
 
 // Initialize audio when component mounts
 import bgmUrl from '@/assets/music/bgm.mp3';
@@ -19,11 +62,19 @@ onMounted(() => {
   audio.value.loop = true;
 });
 
-// Array of possible durations in milliseconds
-const durationOptions = [15000, 5000, 10000]; // 15s, 5s, 10s
+// Duration options in seconds (will be converted to milliseconds)
+const durationInput = ref('5,10,15');
+const durationOptions = computed(() => {
+  return durationInput.value
+    .split(',')
+    .map(num => parseInt(num.trim()) * 1000)
+    .filter(num => !isNaN(num) && num > 0);
+});
+
 const getRandomTime = () => {
-  const randomIndex = Math.floor(Math.random() * durationOptions.length);
-  return durationOptions[randomIndex];
+  if (durationOptions.value.length === 0) return 5000; // Default 5s if no valid options
+  const randomIndex = Math.floor(Math.random() * durationOptions.value.length);
+  return durationOptions.value[randomIndex];
 };
 
 const createParticles = () => {
@@ -105,7 +156,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex flex-col items-center p-6 py-12 relative overflow-hidden">
+  <main class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex flex-col items-center relative overflow-hidden">
     <!-- Animated Background Effects -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute top-0 -left-4 w-96 h-96 bg-cyan-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob"></div>
@@ -130,42 +181,30 @@ onUnmounted(() => {
       </div>
     </transition>
 
-    <div class="w-full max-w-4xl">
-      <!-- Header -->
-      <div class="text-center !mb-10 relative z-10">
-        <div class="inline-block relative">
-          <h1 class="text-6xl py-2 font-bold text-white !mb-4 drop-shadow-2xl">Red Light, Green Light</h1>
-        </div>
-        <p class="text-cyan-100 text-lg font-semibold tracking-wide flex items-center justify-center gap-2">
-          <BoltIcon class="w-5 h-5 text-yellow-400 animate-pulse" />
-          Watch the light change and track your progress
-          <BoltIcon class="w-5 h-5 text-yellow-400 animate-pulse" />
-        </p>
-      </div>
-
-     
-
+    <div class="w-full h-screen flex flex-col items-center justify-center px-4 py-0">
       <!-- Main Game Card -->
-      <div class="rounded-3xl overflow-hidden relative z-10 hover:border-fuchsia-500/50 transition-all duration-500">
-        <!-- Card Glow Effect -->
-        <div class="absolute inset-0 pointer-events-none"></div>
+      <div class="w-full max-w-4xl mx-auto">
         <!-- Light Indicator -->
-        <div class="flex flex-col items-center relative">
+        <div class="flex flex-col items-center">
           <!-- Traffic Light Housing -->
-          <div class=" rounded-3xl p-10 relative overflow-hidden  border-slate-700">
+          <div class="w-full  md:p-4 relative">
             <!-- Metallic Shine effect -->
-            <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-fuchsia-400/10"></div>
-            <div class="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-white/10 to-transparent"></div>
-            <div class="w-56 h-56 rounded-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-inner relative border-4 border-slate-700">
-              <div class="w-48 h-48 rounded-full transition-all duration-500 transform relative" 
+           
+            <div class="w-full max-w-4xl aspect-square mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-inner relative border-4 border-slate-700">
+              <div class="w-[90%] h-[90%] rounded-full transition-all duration-500 transform relative"
                    :class="[
                      lightColor,
                      { 
                        'shadow-glow-green-neon scale-110': lightColor === 'bg-green-500' && isGameRunning,
                        'shadow-glow-red-neon scale-110': lightColor === 'bg-red-500' && isGameRunning,
-                       'scale-100 bg-slate-700': lightColor === 'bg-gray-500'
+                       'scale-100 bg-slate-700': lightColor === 'bg-gray-500',
+                       '!scale-100': isFullscreen
                      }
-                   ]">
+                   ]"
+                   :style="{
+                     '--glow-size': isFullscreen ? '50px' : '20px',
+                     'aspect-ratio': '1/1'  // Ensure perfect circle
+                   }">
                 <!-- Inner glow ring -->
                 <div v-if="isGameRunning" class="absolute inset-0 rounded-full" :class="{
                   'animate-ping-slow bg-green-400/30': lightColor === 'bg-green-500',
@@ -175,36 +214,55 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Status Text -->
-          <div class="mt-10 text-center">
-            <p class="text-4xl font-black !my-12 tracking-wider" 
-               :class="{
-                 'text-green-400 drop-shadow-[0_0_15px_rgba(74,222,128,0.8)] neon-text-green': lightColor === 'bg-green-500',
-                 'text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.8)] neon-text-red': lightColor === 'bg-red-500',
-                 'text-slate-500': lightColor === 'bg-gray-500'
-               }">
-              {{ lightColor === 'bg-green-500' ? '🟢 GREEN LIGHT' : lightColor === 'bg-red-500' ? '🔴 RED LIGHT' : '⚪ READY' }}
-            </p>
-            <div v-if="isGameRunning" class="flex items-center gap-3 text-cyan-300 text-lg font-bold bg-slate-900/60 backdrop-blur-sm px-6 py-2 !my-3 rounded-full border border-cyan-500/30 shadow-lg shadow-cyan-500/20">
-              <FireIcon class="w-6 h-6 text-orange-400 animate-pulse" />
-              <span>{{ lightChanges }} CHANGES</span>
-            </div>
-          </div>
-
           <!-- Control Buttons -->
-          <div class="!mt-8 flex gap-5">
-            <button @click="toggleGame" 
-                    class="px-8 py-3 text-base font-semibold rounded-xl transition-all hover:shadow-lg active:scale-95 transform hover:-translate-y-1 uppercase tracking-wider relative overflow-hidden group border-2 border-slate-600/30" 
-                    :class="{
-                      'bg-slate-800/60 hover:bg-slate-700/60 text-emerald-400 hover:text-emerald-300': !isGameRunning,
-                      'bg-slate-800/60 hover:bg-slate-700/60 text-rose-400 hover:text-rose-300': isGameRunning
-                    }">
+          <div class="flex items-center justify-center gap-4 mt-6 w-full">
+            <!-- Mute Button -->
+            <button 
+              @click="toggleMute" 
+              class="p-3 rounded-xl transition-all hover:shadow-lg active:scale-95 transform hover:-translate-y-0.5 relative overflow-hidden group border-2 border-slate-600/30"
+              :class="{
+                'bg-slate-800/60 hover:bg-slate-700/60': true,
+                'text-cyan-400': !isMuted,
+                'text-rose-400': isMuted
+              }"
+              :title="isMuted ? 'Unmute' : 'Mute'"
+            >
+              <div class="relative z-10 flex items-center justify-center w-6 h-6">
+                <SpeakerXMarkIcon v-if="isMuted" class="w-5 h-5" />
+                <SpeakerWaveIcon v-else class="w-5 h-5" />
+              </div>
+              <div class="absolute inset-0 bg-white/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+            </button>
+            
+            <!-- Duration Options Input -->
+            <div class="relative">
+              <input 
+                v-model="durationInput"
+                type="text"
+                :disabled="isGameRunning"
+                class="w-32 px-4 py-3 bg-slate-800/60 border-2 border-slate-600/30 rounded-xl text-center font-mono text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent"
+                :class="{ 'opacity-70': isGameRunning }"
+                placeholder="e.g. 5,10,15"
+              >
+              <span class="absolute -bottom-6 left-0 right-0 text-xs text-slate-400 text-center">seconds</span>
+            </div>
+
+            <!-- Start/Stop Button -->
+            <button 
+              @click="toggleGame" 
+              class="px-6 py-3 text-base font-semibold rounded-xl transition-all hover:shadow-lg active:scale-95 transform hover:-translate-y-0.5 uppercase tracking-wider relative overflow-hidden group border-2 border-slate-600/30"
+              :class="{
+                'bg-slate-800/60 hover:bg-slate-700/60 text-emerald-400 hover:text-emerald-300': !isGameRunning,
+                'bg-rose-900/60 hover:bg-rose-800/60 text-rose-300 hover:text-rose-200': isGameRunning
+              }"
+              :disabled="durationOptions.length === 0"
+            >
               <span class="relative z-10 flex items-center gap-2">
-                <PlayIcon v-if="!isGameRunning" class="w-6 h-6" />
-                <PauseIcon v-else class="w-6 h-6" />
-                {{ isGameRunning ? 'Stop' : 'Start' }}
+                <PlayIcon v-if="!isGameRunning" class="w-5 h-5" />
+                <PauseIcon v-else class="w-5 h-5" />
+                {{ isGameRunning ? 'STOP' : 'START' }}
               </span>
-              <div class="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+              <div class="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors"></div>
             </button>
             
           </div>
